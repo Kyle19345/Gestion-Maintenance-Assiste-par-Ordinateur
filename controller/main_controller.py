@@ -10,9 +10,9 @@ et l'interface principal du programme.
 import customtkinter as ctk
 import logging
 
-from models.basededonne import BaseDeDonne
-from controller.interventioncontroller import InterventionController
-from controller.machinecontroller import MachineController
+from models.database import BaseDeDonne
+from controller.intervention_controller import InterventionController
+from controller.machine_controller import MachineController
 
 from views.sidebarView import Sidebar,Header
 

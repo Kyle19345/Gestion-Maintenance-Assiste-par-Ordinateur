@@ -8,12 +8,12 @@ depuis l'interface à la base de donné.
 import customtkinter as ctk
 import logging
 
-from views.ListMachine import ListMachine
-from views.addMachine import addMachine
+from views.machine_view import ListMachine
+from views.add_machine_view import addMachine
 from views.messageView import MessageBox, ConfirmationBox
 
 from models.machine import Machine
-from models.basededonne import BaseDeDonne
+from models.database import BaseDeDonne
 
 from config.tool import est_date_valide
 

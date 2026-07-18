@@ -1,6 +1,6 @@
 import customtkinter as ctk
 
-class InterventionView(ctk.CTkToplevel):
+class addIntervention(ctk.CTkToplevel):
     def __init__(self,master,ajouter = None,on_suppr = None):
         super().__init__(master)
         self.title("Editer Intervention")
@@ -95,6 +95,6 @@ class InterventionView(ctk.CTkToplevel):
 
 if __name__ == "__main__":
     root = ctk.CTk()
-    app = InterventionView(root)
+    app = addIntervention(root)
     root.mainloop()
             

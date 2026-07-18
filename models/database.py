@@ -31,7 +31,7 @@ class BaseDeDonne:
     """
     Base de donné principal de l'application
     """
-    def __init__(self, path="DataBase.db"):
+    def __init__(self, path="config\DataBase.db"):
         self.com = sqlite3.connect(path)
         self.cur = self.com.cursor()
 

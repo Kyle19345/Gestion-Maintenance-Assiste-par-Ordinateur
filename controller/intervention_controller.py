@@ -10,12 +10,12 @@ depuis les interfaces graphiques vers la table intervention.
 import customtkinter as ctk
 import logging
 
-from views.addIntervention import InterventionView
-from views.ListIntervention import ListIntervention
-from views.planingView import Planing
+from views.add_intervention_view import addIntervention
+from views.intervention_view import ListIntervention
+from views.planing_view import Planing
 from views.messageView import MessageBox, ConfirmationBox
 
-from models.basededonne import BaseDeDonne
+from models.database import BaseDeDonne
 from models.intervention import Intervention
 from config.tool import est_date_valide
 
@@ -40,7 +40,7 @@ class InterventionController:
 
     def show_update(self, intervention: Intervention) -> None:
         """Affiche les maj des intervnetions"""
-        self.update_intervention = InterventionView(
+        self.update_intervention = addIntervention(
             self.master,
             ajouter=self.enregistrer_maj,
             on_suppr=self.suppr_intervention
@@ -48,9 +48,9 @@ class InterventionController:
         self.update_intervention.afficher(intervention)
         logger.info("Mise à jour intervention afficher")
 
-    def show_add(self) -> InterventionView:
+    def show_add(self) -> addIntervention:
         """Affiche la fenetre pour ajouter une intervention"""
-        self.add_intervention = InterventionView(
+        self.add_intervention = addIntervention(
             self.master,
             ajouter=self.ajouter_intervention
         )

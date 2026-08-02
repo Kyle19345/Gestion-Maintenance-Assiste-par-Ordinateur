@@ -10,9 +10,9 @@ depuis les interfaces graphiques vers la table intervention.
 import customtkinter as ctk
 import logging
 
-from views.add_intervention_view import addIntervention
-from views.intervention_view import ListIntervention
-from views.planing_view import Planing
+from views.intervention_view.add_intervention_view import addIntervention
+from views.intervention_view.intervention_view import ListIntervention
+from views.intervention_view.planing_view import Planing
 from views.messageView import MessageBox, ConfirmationBox
 
 from models.database import BaseDeDonne
@@ -24,7 +24,11 @@ logger = logging.getLogger(__name__)
 
 
 class InterventionController:
-    def __init__(self, master: ctk.CTk, database: BaseDeDonne):
+    def __init__(
+            self,
+            master: ctk.CTk,
+            database: BaseDeDonne
+    ):
         self.master = master
         self.database = database
         self.list_intervenetion = ListIntervention(
@@ -204,11 +208,11 @@ class InterventionController:
 
     def confirm_delete(self) -> None:
         """Supprime l'intervention dans la base de donné"""
-        intervention = self.update_intervention.suppr_selected()
-        self.database.delete_intervention(intervention)
+        intervention_id = self.update_intervention.suppr_selected()
+        self.database.delete_intervention(intervention_id)
         self.update_intervention.destroy()
         self.afficher_planing()
-        logger.info(f"Intervention: {intervention} supprimé")
+        logger.info(f"Intervention: {intervention_id} supprimé")
 
     def find_intervention(self) -> None:
         """

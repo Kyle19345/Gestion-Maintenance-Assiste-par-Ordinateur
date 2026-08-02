@@ -26,12 +26,15 @@ class ListIntervention(BaseFrame):
             on_search: Callable=None
     ):
         super().__init__(master)
+
         self.on_select = on_select
         self.on_search = on_search
 
         # Header Treeview
-        self.column_headers = ["Référence", "Description", "Date d'intervention", "Dure", "Machine", "Outils", "Executant", "statut"]
-        self.column_attrs = ["ref", "description", "date_intervention", "dure", "machine", "outils", "executant", "statut"]
+        self.column_headers = ["Référence", "Description", "Date d'intervention", 
+                               "Dure", "Machine", "Outils", "Executant", "statut"]
+        self.column_attrs = ["ref", "description", "date_intervention", "dure", 
+                             "machine", "outils", "executant", "statut"]
 
         # Conteneur Fenetre recherche   
         frame = ctk.CTkFrame(self)

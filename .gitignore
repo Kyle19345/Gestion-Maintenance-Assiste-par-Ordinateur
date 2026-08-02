@@ -1,0 +1,10 @@
+#Cache
+__pycache__/
+*.pyc
+
+# Fihier de config IDE
+.vscode/
+.idea
+
+# Logs
+*.log

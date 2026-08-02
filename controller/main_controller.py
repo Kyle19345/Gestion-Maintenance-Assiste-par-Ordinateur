@@ -14,20 +14,24 @@ from models.database import BaseDeDonne
 from controller.intervention_controller import InterventionController
 from controller.machine_controller import MachineController
 
-from views.sidebarView import Sidebar,Header
+from views.sider_bar_view import Sidebar, Header
 
 
 logger = logging.getLogger(__name__)
 
 
 class MainController:
-    def __init__(self, master: ctk.CTk):
+    def __init__(
+            self,
+            master: ctk.CTk,
+            database: BaseDeDonne
+    ):
         self.master = master
-        self.database = BaseDeDonne()
+        self.database = database
         self.master.grid_columnconfigure(0, weight=1)
         self.master.grid_columnconfigure(1, weight=1)
 
-        side = Sidebar(self.master, self)
+        side = Sidebar(self.master, controller=self)
         side.grid(
             row=1,
             column=0,
@@ -45,8 +49,14 @@ class MainController:
             sticky="nsew"
         )
 
-        self.intervention = InterventionController(self.master, self.database)
-        self.machine = MachineController(self.master, self.database)
+        self.intervention = InterventionController(
+            master = self.master,
+            database = self.database
+        )
+        self.machine = MachineController(
+            master = self.master,
+            database = self.database
+        )
         self.show_machine()
 
         logger.info("Initialisation du controller principal")

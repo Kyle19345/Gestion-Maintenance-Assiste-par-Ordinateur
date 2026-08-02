@@ -16,17 +16,19 @@ class ListMachine(BaseFrame):
     def __init__(
             self,
             master: ctk.CTk,
-            window_add: Callable = None,
             on_select: Callable = None,
-            width: int = 1000,
-            height: int = 600
+            show_add: Callable = None
     ):
         super().__init__(master)
+
         self.on_select = on_select
+        self.show_add = show_add
 
         # Header Treeview
-        self.column_headers = ["ID", "Nom", "Categorie", "Date de service", "Fabricant", "etat", "compteur"]
-        self.column_attrs = ["ID", "nom", "categorie", "date_service", "fabricant", "etat", "compteur"]
+        self.column_headers = ["ID", "Nom", "Categorie", "Date de service", 
+                               "Fabricant", "etat", "compteur"]
+        self.column_attrs = ["ID", "nom", "categorie", "date_service", 
+                             "fabricant", "etat", "compteur"]
 
         # Fenetre Principal
         frame = ctk.CTkFrame(self)
@@ -41,7 +43,7 @@ class ListMachine(BaseFrame):
         bouton_ajouter = create_button(
             frame,
             text="➕ Ajouter machine",
-            command=window_add,
+            command=self.show_add,
             width=170,
             height=35
         )
@@ -68,6 +70,10 @@ class ListMachine(BaseFrame):
 
         self.tree.bind("<Double-1>", self._on_double_click)
         self._donnees = []
+
+    def set_controller(self, controller) -> None:
+        """Définit le controller de la vue"""
+        self.controller = controller
 
     def _normalize_row(self, machine: Machine) -> None:
         """

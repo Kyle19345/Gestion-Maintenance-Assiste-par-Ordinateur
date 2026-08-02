@@ -4,12 +4,13 @@ depuis l'interface à la base de donné.
 """
 # TODO:
 # Injection des dépendances
+# Getsion des erreurs
 
 import customtkinter as ctk
 import logging
 
-from views.machine_view import ListMachine
-from views.add_machine_view import addMachine
+from views.machine_view.machine_view import ListMachine
+from views.machine_view.add_machine_view import addMachine
 from views.messageView import MessageBox, ConfirmationBox
 
 from models.machine import Machine
@@ -21,13 +22,17 @@ logger = logging.getLogger(__name__)
 
 
 class MachineController:
-    def __init__(self, master: ctk.CTk, database: BaseDeDonne):
+    def __init__(
+            self,
+            master: ctk.CTk,
+            database: BaseDeDonne
+    ):
         self.master = master
         self.database = database
         self.list_machine = ListMachine(
-            self.master,
-            window_add=self.show_add,
-            on_select=self.show_update
+            master,
+            show_add = self.show_add,
+            on_select = self.show_update
         )
         logger.info("Initialisation de machine controller")
 
@@ -38,11 +43,11 @@ class MachineController:
             on_add=self.enregistrer_maj,
             on_suppr=self.suppr_machine
         )
-        list_intervention = self.database.get_intervention_asset(machine.ID)
+        list_intervention = self.database.get_intervention_asset(machine.machine_id)
         self.update_machine.afficher(machine, list_intervention)
         logger.info("Maj des informations récupérer et afficher")
 
-    def show_add(self) -> addMachine:
+    def show_add(self) -> None:
         """Affiche une interface pour ajouter une machine"""
         self.add_machine = addMachine(
             self.master,
@@ -136,7 +141,7 @@ class MachineController:
             return
 
         machine = Machine(
-            ID=donne["id"],
+            machine_id=donne["id"],
             nom=donne["nom"],
             categorie=donne['categorie'],
             date_service=donne["date"],
@@ -178,8 +183,8 @@ class MachineController:
 
     def confirm_suppr(self) -> None:
         """Supprime une ligne dans la bdd"""
-        machine = self.update_machine.get_machine_delete()
-        self.database.delete_machine(machine)
+        machine_id = self.update_machine.get_machine_delete()
+        self.database.delete_machine(machine_id)
         self.update_machine.destroy()
         self.afficher_machine()
-        logger.info(f"Machine {machine} supprimé")
+        logger.info(f"Machine {machine_id} supprimé")

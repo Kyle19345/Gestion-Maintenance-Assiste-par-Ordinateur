@@ -13,12 +13,18 @@ et planing sur chaque machine.
 # Optimisation de la BDD.
 # Système Backup des données.
 # Identifiant unique, utilisation uuid.
+# Ajout relation entre intervention et machine
+# Table Enum pour intervention
+# Modification fonction pour Les interventions (priorité haute)
+# Refactoriser completement la BDD (priorité haute)
 
 
 from typing import List, Tuple
 
 import sqlite3
 import logging
+
+from dataclasses import asdict
 
 from models.machine import Machine
 from models.intervention import Intervention
@@ -31,7 +37,7 @@ class BaseDeDonne:
     """
     Base de donné principal de l'application
     """
-    def __init__(self, path="config\DataBase.db"):
+    def __init__(self, path="config/database.db"):
         self.com = sqlite3.connect(path)
         self.cur = self.com.cursor()
 
@@ -39,7 +45,8 @@ class BaseDeDonne:
 
         self.cur.execute("""
                         CREATE TABLE IF NOT EXISTS machine(
-                            ID TEXT UNIQUE,
+                            machine_id PRIMARY KEY NOT NULL,
+                            ref TEXT UNIQUE,
                             nom TEXT NOT NULL,
                             categorie TEXT NOT NULL,
                             date_service TEXT NOT NULL,
@@ -51,16 +58,17 @@ class BaseDeDonne:
 
         self.cur.execute("""
                         CREATE TABLE IF NOT EXISTS intervention (
+                            intervention_id PRIMARY KEY NOT NULL, 
                             ref TEXT UNIQUE,
                             description TEXT NOT NULL,
                             date_intervention TEXT NOT NULL,
-                            machine TEXT NOT NULL,
+                            machine_id TEXT NOT NULL,
                             dure INTEGER,
                             outils TEXT NOT NULL,
                             executant TEXT NOT NULL,
                             statut TEXT NOT NULL,
-                            FOREIGN KEY (machine)
-                                REFERENCES machine (ID)
+                            FOREIGN KEY (machine_id)
+                                REFERENCES machine (machine_id)
                                 ON DELETE CASCADE
                         )
                         """)
@@ -76,28 +84,21 @@ class BaseDeDonne:
             intervention: Objet Intervention
         """
         try:
-            self.cur.execute(
-                """
-                INSERT INTO intervention
-                    (ref,description,date_intervention,machine,dure,outils,executant,statut)
-                    VALUES(?,?,?,?,?,?,?,?)
-                """,
-                (
-                    intervention.ref,
-                    intervention.description,
-                    intervention.date_intervention,
-                    intervention.machine,
-                    intervention.dure,
-                    intervention.outils,
-                    intervention.executant,
-                    intervention.statut
-                )
-            )
+            data = asdict(intervention)
+            columns = ",".join(data.keys())
+            placeholders = ",".join("?" for _ in data)
+
+            sql = f"""
+            INSERT INTO intervention ({columns})
+            VALUES ({placeholders})
+            """
+
+            self.cur.execute(sql, tuple(data.values()))
             self.com.commit()
             logger.info("Intervention ajouter")
 
-        except Exception as e:
-            logger.exception("Erreur lors de l'ajout", e)
+        except Exception:
+            logger.exception("Erreur lors de l'ajout")
             raise
 
     def add_machine(self, machine: Machine) -> None:
@@ -107,27 +108,21 @@ class BaseDeDonne:
             machine: Objet Machine
         """
         try:
-            self.cur.execute(
-                """
-                INSERT INTO machine
-                    (ID,nom,categorie,date_service,fabricant,etat,compteur)
-                    VALUES(?,?,?,?,?,?,?)
-                """,
-                (
-                    machine.ID,
-                    machine.nom,
-                    machine.categorie,
-                    machine.date_service,
-                    machine.fabricant,
-                    machine.etat,
-                    machine.compteur
-                )
-            )
+            data = asdict(machine)
+            columns = ",".join(data.keys())
+            placeholders = ",".join("?" for _ in data)
+
+            sql = f"""
+            INSERT INTO machine ({columns})
+            VALUES ({placeholders})
+            """
+
+            self.cur.execute(sql, tuple(data.values()))
             self.com.commit()
             logger.info("Machine ajouter")
 
-        except Exception as e:
-            logger.exception("Erreur lors de l'ajout", e)
+        except Exception:
+            logger.exception("Erreur lors de l'ajout")
             raise
 
     def get_all_intervention(self) -> List[Intervention]:
@@ -136,8 +131,8 @@ class BaseDeDonne:
         """
         self.cur.execute(
             """
-            SELECT ref,description,date_intervention,machine,dure,outils,executant,statut
-                FROM intervention WHERE statut='Réalisé'
+            SELECT * FROM intervention 
+            WHERE statut='Réalisé'
             """
         )
         rows = self.cur.fetchall()
@@ -148,15 +143,28 @@ class BaseDeDonne:
         """
         Récupère toutes les machines de la table machine
         """
+        
         self.cur.execute(
             """
-            SELECT ID,nom,categorie,date_service,fabricant,etat,compteur
-                FROM machine
+            SELECT * FROM machine
             """
         )
         rows = self.cur.fetchall()
         logger.info("Extraction machine effectué depuis la Bdd")
         return [Machine(*row) for row in rows]
+
+    def get_every_intervention(self):
+        """
+        Récupère toutes les interventions avec toutes les status
+        """
+        self.cur.execute(
+            """
+            SELECT * FROM intervention
+            """
+        )
+        rows = self.cur.fetchall()
+        logger.info("Extraction intervention effectué depuis la Bdd")
+        return [Intervention(*row) for row in rows]
 
     def get_planing(self) -> List[Intervention]:
         """
@@ -164,8 +172,8 @@ class BaseDeDonne:
         """
         self.cur.execute(
             """
-            SELECT ref,description,date_intervention,machine,dure,outils,executant,statut
-                FROM intervention WHERE statut != 'Réalisé' ORDER BY date_intervention ASC
+            SELECT * FROM intervention 
+            WHERE statut != 'Réalisé' ORDER BY date_intervention ASC
             """
         )
         rows = self.cur.fetchall()
@@ -176,66 +184,50 @@ class BaseDeDonne:
         """
         Met à jour une intervention en fonction de ref
         """
+        data = asdict(intervention)
+        
+        data_update = {k: v for k, v in data.items() if k != "intervention_id"}
+        set_clause = ", ".join(f"{col} = ?" for col in data_update)
+        
+        sql = f"""
+        UPDATE intervention SET {set_clause}
+        WHERE intervention_id = ?
+        """
         try:
-            self.cur.execute(
-                """
-                UPDATE intervention
-                    SET description = ?,
-                    date_intervention = ?,
-                    dure = ?,
-                    outils = ?,
-                    executant = ?,
-                    statut = ?
-                    WHERE ref = ?
-                """,
-                (
-                    intervention.description,
-                    intervention.date_intervention,
-                    intervention.dure,
-                    intervention.outils,
-                    intervention.executant,
-                    intervention.statut,
-                    intervention.ref
-                )
-            )
+            values = list(data_update.values())
+            values.append(intervention.intervention_id)
+
+            self.cur.execute(sql, values)
             self.com.commit()
             logger.info("Mise à jour effectué")
 
-        except Exception as e:
-            logger.exception("Erreur dans la mise à jour des données", e)
+        except Exception:
+            logger.exception("Erreur dans la mise à jour des données")
             raise
 
     def update_machine(self, machine: Machine) -> None:
         """
-        Met à jour une machine en fonction de son ID
+        Met à jour une machine en 
         """
+        data = asdict(machine)
+
+        data_update = {k: v for k, v in data.items() if k != "machine_id"}
+        set_clause = ", ".join(f"{col} = ?" for col in data_update)
+
+        sql = f"""
+        UPDATE machine SET {set_clause}
+        WHERE machine_id = ?
+        """        
         try:
-            self.cur.execute(
-                """
-                UPDATE machine
-                    SET nom = ?,
-                    categorie = ?,
-                    date_service = ?,
-                    fabricant = ?,
-                    etat = ?,
-                    compteur = ?
-                    WHERE ID = ?
-                """,
-                (
-                    machine.nom,
-                    machine.categorie,
-                    machine.date_service,
-                    machine.fabricant,
-                    machine.etat,
-                    machine.compteur,
-                    machine.ID
-                )
-            )
+            values = list(data_update.values())
+            values.append(machine.machine_id)
+
+            self.cur.execute(sql, values)
             self.com.commit()
             logger.info("Mise à jour effectué")
 
-        except Exception as e:
-            logger.exception("Erreur dans la mise à jour des données", e)
+        except Exception:
+            logger.exception("Erreur dans la mise à jour des données")
             raise
 
     def get_intervention_asset(
@@ -255,42 +247,46 @@ class BaseDeDonne:
         )
         return self.cur.fetchall()
 
-    def delete_machine(self, machine: Machine) -> None:
+    def delete_machine(self, machine_id: str) -> None:
         """
         Supprime une machine par rapport à son ID
+        Args:
+            machine_id: ID machine
         """
         try:
             self.cur.execute(
                 """
                 DELETE FROM machine
-                    WHERE ID = ?
+                    WHERE machine_id = ?
                 """,
-                (machine, )
+                (machine_id, )
             )
             self.com.commit()
-            logger.info("Suppression effectué %s", machine)
+            logger.info("Suppression effectué %s", machine_id)
 
-        except Exception as e:
-            logger.info("Erreur lors de la suppression de l'élement", e)
+        except Exception:
+            logger.info("Erreur lors de la suppression de l'élement")
             raise
 
-    def delete_intervention(self, intervention: Intervention) -> None:
+    def delete_intervention(self, intervention_id: str) -> None:
         """
         Supprime une intervention
+        Args:
+            intervention_id: l'id de l'intervention
         """
         try:
             self.cur.execute(
                 """
                 DELETE FROM intervention
-                    WHERE ref = ?
+                    WHERE intervention_id = ?
                 """,
-                (intervention, )
+                (intervention_id, )
             )
             self.com.commit()
             logger.info("Suppression intervention effectué")
 
-        except Exception as e:
-            logger.info("Erreur lors de la suppression de l'élement", e)
+        except Exception:
+            logger.info("Erreur lors de la suppression de l'élement")
             raise
 
     def find_intervention(
@@ -317,6 +313,6 @@ class BaseDeDonne:
             self.com.close()
             logger.info("Bdd fermé ")
 
-        except Exception as e:
-            logger.exception("Erreur dans la fermeture de la Bdd", e)
+        except Exception:
+            logger.exception("Erreur dans la fermeture de la Bdd")
             raise

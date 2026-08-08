@@ -1,113 +1,15 @@
 import pytest
-
-from models.database import BaseDeDonne
-from models.intervention import Intervention
-from models.machine import Machine
 import sqlite3
 
-@pytest.fixture
-def db():
-    database = BaseDeDonne(":memory:")
-    yield database
-    database.close()
+from models.intervention import Intervention, StatutIntervention
+from models.machine import Machine
 
-
-def test_add_machine(db):
-    machine = Machine(
-        ref = "MCH-001",
-        nom = "Test_machine",
-        categorie = "Test",
-        date_service = "02/08/2026",
-        fabricant = "Toyota",
-        etat = "En maintenance",
-        compteur = "4J"
-    )
-
-    db.add_machine(machine=machine)
-    machines = db.get_all_machine()
-
-    assert machines[0].ref == "MCH-001"
-    assert machines[0].nom == "Test_machine"
-
-def test_add_multiple_machine(db):
-    machine = Machine(
-        nom = "Test_machine_1",
-        categorie = "Test",
-        date_service = "01/08/2026"
-    )
-
-    machine2 = Machine(
-        nom = "Test_machine_2",
-        categorie = "Test",
-        date_service = "01/08/2026",
-        etat = "En maintenance"
-    )
-
-    db.add_machine(machine=machine)
-    db.add_machine(machine=machine2) 
-    machines = db.get_all_machine()
-
-    assert len(machines) == 2
-    assert machines[0].machine_id != machines[1].machine_id
-    assert machines[1].etat == "En maintenance"
-
-def test_exception_id_machine(db):
-    machine1 = Machine(
-        machine_id = "m1"
-    )
-    machine2 = Machine(
-        machine_id = "m1"
-    )
-
-    db.add_machine(machine=machine1)
-    with pytest.raises(sqlite3.IntegrityError):
-        db.add_machine(machine=machine2)
-
-    machines = db.get_all_machine()
-
-    assert len(machines) == 1
-    assert machines[0].machine_id == "m1"
-
-def test_delete_machine(db):
-    machine = Machine(
-        machine_id = "m1"
-    )
-    db.add_machine(machine=machine)
-    db.delete_machine("m1")
-    result = db.get_all_machine()
-
-    assert len(result) == 0
-
-def test_update_machine(db):
-    machine = Machine(
-        machine_id = "m1",
-        nom = "test_machine_1"
-    )
-
-    machine2 = Machine(
-        machine_id = "m1",
-        nom = "test_update_machine_1"
-    )
-
-    machine3 = Machine(
-        machine_id = "inconnu"
-    )
-    db.add_machine(machine=machine)
-    db.update_machine(machine=machine2)
-    db.update_machine(machine=machine3)
-
-    result = db.get_all_machine()
-
-    assert len(result) == 1
-    assert result[0].nom == "test_update_machine_1"
-
-
-def test_add_planing(db):
-    machine = Machine(
+def test_add_planing(db, make_machine, make_intervention):
+    machine = make_machine(
         machine_id = "mch-01"
     )
 
-    intervention = Intervention(
+    intervention = make_intervention(
         ref = "IN-001",
         description = "Test_add_intervention",
         machine_id = "mch-01"
@@ -121,8 +23,8 @@ def test_add_planing(db):
     assert len(results) == 1
     assert results[0].machine_id == "mch-01"
 
-def test_add_planing_with_no_machine(db):
-    intervention = Intervention(
+def test_add_planing_with_no_machine(db, make_intervention):
+    intervention = make_intervention(
             ref = "IN-001",
             description = "Test_add_intervention",
             machine_id = "mch-01"
@@ -133,16 +35,16 @@ def test_add_planing_with_no_machine(db):
     results = db.get_planing()
     assert(len(results)) == 0
 
-def test_add_multiples_planing(db):
-    machine = Machine(
+def test_add_multiples_planing(db, make_machine, make_intervention):
+    machine = make_machine(
         machine_id = "m-01"
     )
-    intervention = Intervention(
+    intervention = make_intervention(
         ref = "IN-01",
         machine_id = "m-01"
     )
 
-    intervention2 = Intervention(
+    intervention2 = make_intervention(
         ref = "IN-02",
         machine_id = "m-01"
     )
@@ -164,7 +66,7 @@ def test_add_intervention(db):
 
     intervention = Intervention(
         machine_id = "m-01",
-        statut = "Réalisé"
+        statut = StatutIntervention.REALISE
     )
 
     db.add_machine(machine=machine)
@@ -175,23 +77,34 @@ def test_add_intervention(db):
     assert len(results) == 1
     assert results[0].statut == "Réalisé"
 
+def test_add_interveniton_without_machine(db, make_intervention):
+    intervention = make_intervention()
+
+    db.add_intervention(intervention=intervention)
+
+    result = db.get_every_intervention()
+
+    assert len(result) == 1
+    assert result[0].machine_id is None
+
 def test_delete_intervention(db):
     machine = Machine(
         machine_id = "m-01"
     )
 
     intervention = Intervention(
+        intervention_id = "IN001",
         ref = "IN-01",
         machine_id = "m-01"
     )
 
     db.add_machine(machine=machine)
     db.add_intervention(intervention=intervention)
-    results = db.get_planing()
+    results = db.get_every_intervention()
     machines = db.get_all_machine()
 
-    db.delete_intervention(intervention_id="IN-01")
-    result2= db.get_planing()
+    db.delete_intervention(intervention_id="IN001")
+    result2= db.get_every_intervention()
     machines2 = db.get_all_machine()
 
     assert len(results) == 1
@@ -207,14 +120,14 @@ def test_update_intervention(db):
     intervention = Intervention(
         ref = "IN-01",
         machine_id = "m-01",
-        statut = "Réalisé"
+        statut = StatutIntervention.REALISE
     )
 
     intervention_maj = Intervention(
         intervention_id = intervention.intervention_id,
         ref = "IN-01",
         machine_id = "m-01",
-        statut = "Planifié",
+        statut = StatutIntervention.PLANIFIE,
         outils = "Tourne Vis"
     )
 
@@ -238,12 +151,20 @@ def test_delete_cascade(db):
     )
     intervention =  Intervention(
         ref = "IN-01",
-        machine_id = "mch-01"
+        machine_id = machine.machine_id
+    )
+
+    intervention2 = Intervention(
+        ref = "IN-02",
+        machine_id = machine.machine_id
     )
 
     db.add_machine(machine=machine)
     db.add_intervention(intervention=intervention)
+    db.add_intervention(intervention=intervention2)
+
     db.delete_machine(machine_id="mch-01")
+
     machines = db.get_all_machine()
     interventions = db.get_all_intervention()
 
@@ -263,7 +184,7 @@ def test_get_every_intervention(db):
     intervention2 = Intervention(
         ref = "IN-02",
         machine_id = "mch-01",
-        statut = "Réalisé"
+        statut = StatutIntervention.REALISE
     )
 
     db.add_machine(machine=machine)
@@ -273,3 +194,61 @@ def test_get_every_intervention(db):
     results = db.get_every_intervention()
 
     assert len(results) == 2
+
+def test_find_intervention(db, make_intervention, make_machine):
+    machine = make_machine(machine_id = "MCH-01")
+    intervention = make_intervention(machine_id = machine.machine_id)
+
+    db.add_machine(machine=machine)
+    db.add_intervention(intervention=intervention)
+
+    results = db.find_intervention(intervention_ref = "IN")
+
+    assert len(results) == 1
+    assert results[0].description == "Intervention test"
+
+def test_find_multiple_intervention(db, make_intervention, make_machine):
+    machine = make_machine(machine_id = "MCH-01")
+    intervention1 = make_intervention(ref = "IN01", machine_id = machine.machine_id)
+    intervention2 = make_intervention(ref = "IN02", machine_id = machine.machine_id)
+
+    db.add_machine(machine = machine)
+    db.add_intervention(intervention = intervention1)
+    db.add_intervention(intervention = intervention2)
+
+    results = db.find_intervention(intervention_ref = "IN")
+
+    assert len(results) == 2
+    assert results[0].ref == "IN01"
+    assert results[1].ref == "IN02"
+
+def test_get_intervention_asset(db, make_intervention, make_machine):
+    machine = make_machine(ref="MCH001", machine_id = "MCH-01")
+    machine2 = make_machine(ref = "MCH002", machine_id = "MCH-02")
+
+    intervention = make_intervention(
+        ref = "IN01",
+        machine_id = "MCH-01"
+    )
+
+    intervention2 = make_intervention(
+        ref = "IN02",
+        machine_id = "MCH-01"
+    )
+
+    intervention3 = make_intervention(
+        ref = "IN03",
+        machine_id = machine2.machine_id
+    )
+
+    db.add_machine(machine=machine)
+    db.add_machine(machine=machine2)
+
+    db.add_intervention(intervention=intervention)
+    db.add_intervention(intervention=intervention2)
+    db.add_intervention(intervention=intervention3)
+
+    result = db.get_intervention_asset(machine_id = "MCH-01")
+
+    assert len(result) == 2
+    assert result[0].ref == "IN01"

@@ -5,7 +5,15 @@ Ce module représente une Intervention assigné
 # TODO: Source de vérité principal
 
 from dataclasses import dataclass, field
-from uuid import uuid4, UUID
+from uuid import uuid4
+from enum import Enum
+
+
+class StatutIntervention(Enum):
+    PLANIFIE = "Planifié"
+    EN_COURS = "En cours"
+    REALISE = "Réalisé"
+
 
 @dataclass
 class Intervention:
@@ -14,12 +22,13 @@ class Intervention:
     ref: str = ""
     description: str = ""
     date_intervention: str = ""
-    machine_id: str = ""
+    machine_id: str = None
     dure: int = ""
     outils: str = ""
     executant: str = ""
-    statut: str = "Planifié"
+    statut: StatutIntervention = StatutIntervention.PLANIFIE.value
+
 
 if __name__ == "__main__":
     intervention = Intervention()
-    print(intervention.ref)
+    print(intervention.statut)

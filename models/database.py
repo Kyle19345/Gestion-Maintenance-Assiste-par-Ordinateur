@@ -12,10 +12,6 @@ et planing sur chaque machine.
 # dans chaque fonction.
 # Optimisation de la BDD.
 # Système Backup des données.
-# Identifiant unique, utilisation uuid.
-# Ajout relation entre intervention et machine
-# Table Enum pour intervention
-# Modification fonction pour Les interventions (priorité haute)
 # Refactoriser completement la BDD (priorité haute)
 
 
@@ -26,8 +22,8 @@ import logging
 
 from dataclasses import asdict
 
-from models.machine import Machine
-from models.intervention import Intervention
+from models.machine import Machine, EtatMachine
+from models.intervention import Intervention, StatutIntervention
 
 
 logger = logging.getLogger(__name__)
@@ -60,11 +56,11 @@ class BaseDeDonne:
                         CREATE TABLE IF NOT EXISTS intervention (
                             intervention_id PRIMARY KEY NOT NULL, 
                             ref TEXT UNIQUE,
-                            description TEXT NOT NULL,
+                            description TEXT,
                             date_intervention TEXT NOT NULL,
-                            machine_id TEXT NOT NULL,
+                            machine_id TEXT,
                             dure INTEGER,
-                            outils TEXT NOT NULL,
+                            outils TEXT,
                             executant TEXT NOT NULL,
                             statut TEXT NOT NULL,
                             FOREIGN KEY (machine_id)
@@ -76,53 +72,20 @@ class BaseDeDonne:
         self.com.commit()
         logger.info("Base de données initialisée")
 
-    def add_intervention(self, intervention: Intervention) -> None:
-        """
-        Fonction permettant d'ajouer une intervention
-        dans la table Intervention
-        Args:
-            intervention: Objet Intervention
-        """
-        try:
-            data = asdict(intervention)
-            columns = ",".join(data.keys())
-            placeholders = ",".join("?" for _ in data)
-
-            sql = f"""
-            INSERT INTO intervention ({columns})
-            VALUES ({placeholders})
-            """
-
-            self.cur.execute(sql, tuple(data.values()))
+    def _execute_sql(
+            self,
+            sql: str,
+            values: tuple,
+            log_success: str = "",
+            log_error: str = ""
+    ) -> None:
+        try: 
+            self.cur.execute(sql, values)
             self.com.commit()
-            logger.info("Intervention ajouter")
+            logger.info(log_success)
 
         except Exception:
-            logger.exception("Erreur lors de l'ajout")
-            raise
-
-    def add_machine(self, machine: Machine) -> None:
-        """
-        Fonction permettant d'ajouter une machine dans la table machine
-        Args:
-            machine: Objet Machine
-        """
-        try:
-            data = asdict(machine)
-            columns = ",".join(data.keys())
-            placeholders = ",".join("?" for _ in data)
-
-            sql = f"""
-            INSERT INTO machine ({columns})
-            VALUES ({placeholders})
-            """
-
-            self.cur.execute(sql, tuple(data.values()))
-            self.com.commit()
-            logger.info("Machine ajouter")
-
-        except Exception:
-            logger.exception("Erreur lors de l'ajout")
+            logger.exception(log_error)
             raise
 
     def get_all_intervention(self) -> List[Intervention]:
@@ -180,11 +143,66 @@ class BaseDeDonne:
         logger.info("Extraction planing effectué depuis la Bdd")
         return [Intervention(*row) for row in rows]
 
+    
+    def add_intervention(self, intervention: Intervention) -> None:
+        """
+        Fonction permettant d'ajouer une intervention
+        dans la table Intervention
+        Args:
+            intervention: Objet Intervention
+        """
+        data = asdict(intervention)
+        if isinstance(data["statut"], StatutIntervention):
+            data["statut"] = data["statut"].value
+
+        columns = ",".join(data.keys())
+        placeholders = ",".join("?" for _ in data)
+
+        sql = f"""
+        INSERT INTO intervention ({columns})
+        VALUES ({placeholders})
+        """
+
+        values = tuple(data.values())
+        self._execute_sql(
+            sql=sql,
+            values = values,
+            log_success = f"Interveniton {data['ref']} ajouter dans la db",
+            log_error = f"Erreur lors de l'enregistrement de l'intervention {data['ref']} "
+        )
+    
+    def add_machine(self, machine: Machine) -> None:
+        """
+        Fonction permettant d'ajouter une machine dans la table machine
+        Args:
+            machine: Objet Machine
+        """
+        data = asdict(machine)
+        if isinstance(data["etat"], EtatMachine):
+            data["etat"] = data["etat"].value
+
+        columns = ",".join(data.keys())
+        placeholders = ",".join("?" for _ in data)
+
+        sql = f"""
+        INSERT INTO machine ({columns})
+        VALUES ({placeholders})
+        """
+        values = tuple(data.values())
+        self._execute_sql(
+            sql=sql,
+            values=values,
+            log_success=f"Machine {data['ref']} enregistrer dans la db",
+            log_error=f"Erreur lors de l'enregistrement de la machine {data['ref']} dans la db"
+        )
+    
     def update_intervention(self, intervention: Intervention) -> None:
         """
         Met à jour une intervention en fonction de ref
         """
         data = asdict(intervention)
+        if isinstance(data["statut"], StatutIntervention):
+            data["statut"] = data["statut"].value
         
         data_update = {k: v for k, v in data.items() if k != "intervention_id"}
         set_clause = ", ".join(f"{col} = ?" for col in data_update)
@@ -193,23 +211,23 @@ class BaseDeDonne:
         UPDATE intervention SET {set_clause}
         WHERE intervention_id = ?
         """
-        try:
-            values = list(data_update.values())
-            values.append(intervention.intervention_id)
+        values = list(data_update.values())
+        values.append(intervention.intervention_id)
 
-            self.cur.execute(sql, values)
-            self.com.commit()
-            logger.info("Mise à jour effectué")
-
-        except Exception:
-            logger.exception("Erreur dans la mise à jour des données")
-            raise
-
+        self._execute_sql(
+            sql=sql,
+            values=values,
+            log_success=f"Mise à jour de l'intervention {data['ref']} effectué",
+            log_error=f"Erreur lors de la mise à jour de l'intervention {data['ref']}"
+        )
+        
     def update_machine(self, machine: Machine) -> None:
         """
-        Met à jour une machine en 
+        Met à jour une machine
         """
         data = asdict(machine)
+        if isinstance(data["etat"], EtatMachine):
+            data["etat"] = data["etat"].value
 
         data_update = {k: v for k, v in data.items() if k != "machine_id"}
         set_clause = ", ".join(f"{col} = ?" for col in data_update)
@@ -218,34 +236,32 @@ class BaseDeDonne:
         UPDATE machine SET {set_clause}
         WHERE machine_id = ?
         """        
-        try:
-            values = list(data_update.values())
-            values.append(machine.machine_id)
+        values = list(data_update.values())
+        values.append(machine.machine_id)
 
-            self.cur.execute(sql, values)
-            self.com.commit()
-            logger.info("Mise à jour effectué")
-
-        except Exception:
-            logger.exception("Erreur dans la mise à jour des données")
-            raise
-
+        self._execute_sql(
+            sql=sql,
+            values=values,
+            log_success=f"Mise à jour de la machine {data['ref']} effectué.",
+            log_error=f"Erreur lors de la mise à jour de la machine {data['ref']}."
+        )
+       
     def get_intervention_asset(
             self,
-            machine: Machine
-    ) -> List[Tuple[str, str, str]]:
+            machine_id: str
+    ) -> List[Intervention]:
         """
-        Récupère les interventions assignées à chaque machine
+        Récupère les interventions assignées à une machine.
         """
         self.cur.execute(
             """
-            SELECT ref,description,date_intervention
-                FROM intervention WHERE machine = ? AND statut = 'Planifié'
+            SELECT * FROM intervention WHERE machine_id = ? AND statut = 'Planifié'
                 ORDER BY date_intervention ASC
             """,
-            (machine, )
+            (machine_id, )
         )
-        return self.cur.fetchall()
+        rows = self.cur.fetchall()
+        return [Intervention(*row) for row in rows]
 
     def delete_machine(self, machine_id: str) -> None:
         """
@@ -253,20 +269,18 @@ class BaseDeDonne:
         Args:
             machine_id: ID machine
         """
-        try:
-            self.cur.execute(
-                """
-                DELETE FROM machine
-                    WHERE machine_id = ?
-                """,
-                (machine_id, )
-            )
-            self.com.commit()
-            logger.info("Suppression effectué %s", machine_id)
+        sql = f"""
+        DELETE FROM machine
+             WHERE machine_id = ?
+        """
+        values = (machine_id, )
 
-        except Exception:
-            logger.info("Erreur lors de la suppression de l'élement")
-            raise
+        self._execute_sql(
+            sql=sql,
+            values=values,
+            log_success=f"Suppression effectué {machine_id}",
+            log_error=f"Erreur lors de la suppression de l'élément {machine_id}"
+        )
 
     def delete_intervention(self, intervention_id: str) -> None:
         """
@@ -274,34 +288,32 @@ class BaseDeDonne:
         Args:
             intervention_id: l'id de l'intervention
         """
-        try:
-            self.cur.execute(
-                """
-                DELETE FROM intervention
-                    WHERE intervention_id = ?
-                """,
-                (intervention_id, )
-            )
-            self.com.commit()
-            logger.info("Suppression intervention effectué")
+        sql = f"""
+        DELETE FROM intervention
+            WHERE intervention_id = ?
+        """
 
-        except Exception:
-            logger.info("Erreur lors de la suppression de l'élement")
-            raise
+        values = (intervention_id, )
 
+        self._execute_sql(
+            sql=sql,
+            values=values,
+            log_success=f"Suppression intervention {intervention_id} effectué.",
+            log_error=f"Erreur lors de la suppression de l'intervention {intervention_id}."
+        )
+       
     def find_intervention(
             self,
-            intervention: Intervention
+            intervention_ref: str
     ) -> List[Intervention]:
         """
         Retrouve une Intervention
         """
         self.cur.execute(
             """
-            SELECT ref,description,date_intervention,machine,dure,outils,executant,statut
-                FROM intervention WHERE ref LIKE ?
+            SELECT * FROM intervention WHERE ref LIKE ?
             """,
-            (f"%{intervention}%", )
+            (f"%{intervention_ref}%", )
         )
         rows = self.cur.fetchall()
         return [Intervention(*row) for row in rows]

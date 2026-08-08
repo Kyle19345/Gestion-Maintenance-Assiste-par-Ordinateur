@@ -43,6 +43,8 @@ class MachineController:
             on_add=self.enregistrer_maj,
             on_suppr=self.suppr_machine
         )
+
+        # A modifier en raison modification bdd
         list_intervention = self.database.get_intervention_asset(machine.machine_id)
         self.update_machine.afficher(machine, list_intervention)
         logger.info("Maj des informations récupérer et afficher")

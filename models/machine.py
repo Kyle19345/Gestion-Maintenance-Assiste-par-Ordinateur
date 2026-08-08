@@ -7,6 +7,13 @@ Ce module represente l'objet machine
 
 from dataclasses import dataclass, field
 from uuid import uuid4
+from enum import Enum
+
+
+class EtatMachine(Enum):
+    ACTIF = "Actif"
+    EN_MAINTENANCE = "En maintenance"
+    EN_PANNE = "En_panne"
 
 
 @dataclass
@@ -18,8 +25,9 @@ class Machine:
     categorie: str = ""
     date_service: str = ""
     fabricant: str = ""
-    etat: str = "Actif"
+    etat: EtatMachine = EtatMachine.ACTIF
     compteur: int = 0
+
 
 if __name__ == "__main__":
     machine1 = Machine()

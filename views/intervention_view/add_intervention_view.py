@@ -215,10 +215,10 @@ class addIntervention(ctk.CTkToplevel):
         self.entries["Exécutant"].delete("0", "end")
         self.description.delete("1.0", "end")
     
-    def suppr_selected(self):
+    def suppr_selected(self) -> str:
         """Supprime une ligne."""
         return self.entries["Référence"].get()
-    
+
 
 if __name__ == "__main__":
     root = ctk.CTk()

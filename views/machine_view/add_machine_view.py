@@ -9,6 +9,11 @@ from tkinter import ttk
 from models.machine import Machine
 from views._ui_utils import create_button, create_label, create_entry
 
+# TODO:
+# Modifier les objets renvoyés par la vue 
+# pour etre en accord avec le controller
+# Améliorer l'UX
+
 
 class addMachine(ctk.CTkToplevel):
     def __init__(
@@ -226,7 +231,7 @@ class addMachine(ctk.CTkToplevel):
         Récupère les valeurs dans les champs.
         """
         return {
-            "id": self.entries["ID"].get().strip(),
+            "ref": self.entries["ID"].get().strip(),
             "nom": self.entries["Nom"].get().strip(),
             "categorie": self.entries["Catégorie"].get().strip(),
             "date": self.entries["Date_de_service"].get().strip(),
@@ -240,7 +245,7 @@ class addMachine(ctk.CTkToplevel):
         Récupère les valeurs dans les champs.
         """
         return {
-            "id": self.entries["ID"].get().strip(),
+            "ref": self.entries["ID"].get().strip(),
             "nom": self.entries["Nom"].get().strip(),
             "categorie": self.entries["Catégorie"].get().strip(),
             "date": self.entries["Date_de_service"].get().strip(),
@@ -259,7 +264,7 @@ class addMachine(ctk.CTkToplevel):
         self.entries["Fabricant"].delete(0, "end")
         self.entries["Compteur"].delete(0, "end")
 
-    def get_machine_delete(self):
+    def get_machine_delete(self) -> str:
         """Récupère l'id du machine à supprimer"""
         return self.entries["ID"].get()
 

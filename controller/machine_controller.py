@@ -5,30 +5,34 @@ depuis l'interface à la base de donné.
 # TODO:
 # Injection des dépendances
 # Getsion des erreurs
+# Refactorisation 
+# Utiliser la classe Machine commme source de vérité
 
 import customtkinter as ctk
 import logging
+
+from typing import Dict
+
+from controller.base_controller import BaseController
 
 from views.machine_view.machine_view import ListMachine
 from views.machine_view.add_machine_view import addMachine
 from views.messageView import MessageBox, ConfirmationBox
 
 from models.machine import Machine
-from models.database import BaseDeDonne
+from models.database import BaseDeDonne, DuplicateReferenceError, PrimaryKeyError
 
-from config.tool import est_date_valide
 
 logger = logging.getLogger(__name__)
 
 
-class MachineController:
+class MachineController(BaseController):
     def __init__(
             self,
             master: ctk.CTk,
             database: BaseDeDonne
     ):
-        self.master = master
-        self.database = database
+        super().__init__(master, database)
         self.list_machine = ListMachine(
             master,
             show_add = self.show_add,
@@ -44,7 +48,6 @@ class MachineController:
             on_suppr=self.suppr_machine
         )
 
-        # A modifier en raison modification bdd
         list_intervention = self.database.get_intervention_asset(machine.machine_id)
         self.update_machine.afficher(machine, list_intervention)
         logger.info("Maj des informations récupérer et afficher")
@@ -60,46 +63,36 @@ class MachineController:
     def enregistrer_maj(self) -> None:
         """Enregistre les maj de donné de l'interface vers la bdd"""
         donne = self.update_machine.get_entre_with_etat()
-        for entry in donne.values():
-            if not entry:
-                MessageBox(
-                    self.master,
-                    "Veuillez remplir tous les champs",
-                    type="error"
-                )
-                return
+
+        if not self.check_data(
+            data=donne,
+            date=donne["date_service"],
+            number=donne["compteur"]
+        ):
+            return
+
+        machine = Machine(**donne)
+
         try:
-            compt = int(donne.get("compteur", 0))
+            self.database.update_machine(machine)
 
-        except (TypeError, ValueError):
+        except DuplicateReferenceError:
             MessageBox(
                 self.master,
-                "Le compteur doit etre un nombre entier",
+                "La reference saisie est invalide",
                 type="error"
             )
-            return
+            logger.error("""Erreur lors de la mise à jour de la machine""")
 
-        valide = est_date_valide(donne["date"])
-        if not valide:
+        except PrimaryKeyError:
             MessageBox(
                 self.master,
-                "La date saisie est invalide",
+                "L'ID saisie est invalide",
                 type="error"
             )
-            return
-
-        machine = Machine(
-            ID=donne["id"],
-            nom=donne["nom"],
-            categorie=donne['categorie'],
-            date_service=donne["date"],
-            fabricant=donne["fabricant"],
-            compteur=compt,
-            etat=donne["etat"]
-        )
+            logger.error("""Erreur lors de la mise à jour de la machine""")
 
         logger.info("Machine %s", machine)
-        self.database.update_machine(machine)
         MessageBox(
             self.master,
             "Mise à jour de la machine effectué",
@@ -113,61 +106,42 @@ class MachineController:
         la bdd
         """
         donne = self.add_machine.get_entre()
-        for entry in donne.values():
-            if not entry:
-                MessageBox(
-                    self.master,
-                    "Veuillez remplir tous les champs",
-                    type="error"
-                )
-                return
 
-        try:
-            compt = int(donne.get("compteur", 0))
-
-        except (TypeError, ValueError):
-            MessageBox(
-                self.master,
-                "Le compteur doit etre un nombre entier",
-                type="error"
-                )
+        if not self.check_data(
+            data=donne,
+            date=donne["date_service"],
+            number=donne["compteur"]
+        ):
             return
 
-        valide = est_date_valide(donne["date"])
-        if not valide:
-            MessageBox(
-                self.master,
-                "La date saisie est invalide",
-                type="error"
-            )
-            return
-
-        machine = Machine(
-            machine_id=donne["id"],
-            nom=donne["nom"],
-            categorie=donne['categorie'],
-            date_service=donne["date"],
-            fabricant=donne["fabricant"],
-            compteur=compt
-        )
-
+        machine = Machine(**donne)
+        # Attraper l'erreur dans la base de donné
         try:
-            logger.info("Machine %s", machine)
             self.database.add_machine(machine)
+           
+        except DuplicateReferenceError:
             MessageBox(
                 self.master,
-                "Machine Enregistrer",
-                type="success"
-            )
-            self.afficher_machine()
-
-        except Exception as e:
-            MessageBox(
-                self.master,
-                "Le matricule saisie est invalide",
+                "La reference saisie est invalide",
                 type="error"
             )
-            logger.error("Erreur lors de l'ajout de la machine", {e})
+            logger.error("""Erreur lors de l'ajout de la machine""")
+
+        except PrimaryKeyError:
+            MessageBox(
+                self.master,
+                "L'ID saisie est invalide",
+                type="error"
+            )
+            logger.error("""Erreur lors de l'ajout de la machine""")
+           
+        logger.info("Machine %s", machine)
+        MessageBox(
+            self.master,
+            "Machine Enregistrer",
+            type="success"
+        )
+        self.afficher_machine()
 
     def afficher_machine(self) -> None:
         """

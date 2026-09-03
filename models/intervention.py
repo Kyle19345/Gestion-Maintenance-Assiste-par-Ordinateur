@@ -18,17 +18,20 @@ class StatutIntervention(Enum):
 @dataclass
 class Intervention:
     """Intervention assigné à une machine"""
-    intervention_id : str = field(default_factory=lambda: str(uuid4()))
+    intervention_id: str = field(default_factory=lambda: str(uuid4()))
     ref: str = ""
     description: str = ""
     date_intervention: str = ""
     machine_id: str = None
-    dure: int = ""
+    dure: int = 0
     outils: str = ""
     executant: str = ""
     statut: StatutIntervention = StatutIntervention.PLANIFIE.value
 
+    def __post_init__(self):
+        self.dure = int(self.dure)
+
 
 if __name__ == "__main__":
     intervention = Intervention()
-    print(intervention.statut)
+    print(intervention.intervention_id)

@@ -45,6 +45,7 @@ class Sidebar(ctk.CTkFrame):
             command=self.controller.show_intervention,
             height=35
         )
+        
         bouton_intervention.grid(
             row=3,
             column=0,

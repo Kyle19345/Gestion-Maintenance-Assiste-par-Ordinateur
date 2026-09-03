@@ -1,0 +1,208 @@
+{
+  "version": "2.0.0",
+  "darkMode": true,
+  "gridEnabling": false,
+  "currentViewName": null,
+  "defaultView": {
+    "detailLevel": "All",
+    "tablePositions": [
+      {
+        "name": "Intervention",
+        "schemaName": "public",
+        "x": -1140.6656008421833,
+        "y": -8.870642364243167
+      },
+      {
+        "name": "OrdreTravail",
+        "schemaName": "public",
+        "x": -560.2046110703787,
+        "y": -226.81019995227786
+      },
+      {
+        "name": "Equipement",
+        "schemaName": "public",
+        "x": -135.2139486400348,
+        "y": -193.68273086692818
+      },
+      {
+        "name": "Personnel",
+        "schemaName": "public",
+        "x": 299.4394778047377,
+        "y": 420.3336219102318
+      },
+      {
+        "name": "Operation",
+        "schemaName": "public",
+        "x": -233.23319263013445,
+        "y": 316.32246500768156
+      },
+      {
+        "name": "Outillage",
+        "schemaName": "public",
+        "x": 106.99202359250586,
+        "y": 745.5656981370636
+      },
+      {
+        "name": "DemandeIntervention",
+        "schemaName": "public",
+        "x": -1144.5139655113633,
+        "y": -373.33319537653216
+      }
+    ],
+    "tableGroupCollapseStates": [],
+    "stickyNoteLayouts": [],
+    "referencePaths": [
+      {
+        "firstFieldNames": [
+          "machine_id"
+        ],
+        "firstTableName": "Intervention",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "machine_id"
+        ],
+        "secondTableName": "Machine",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "machine_id"
+        ],
+        "firstTableName": "Intervention",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "machine_id"
+        ],
+        "secondTableName": "Equipement",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "machine_id"
+        ],
+        "firstTableName": "Intervention",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "equipement_id"
+        ],
+        "secondTableName": "Equipement",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "equipement"
+        ],
+        "firstTableName": "OrdreTravail",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "equipement_id"
+        ],
+        "secondTableName": "Equipement",
+        "secondSchemaName": "public",
+        "secondRelation": "1",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "equipement_id"
+        ],
+        "firstTableName": "OrdreTravail",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "equipement_id"
+        ],
+        "secondTableName": "Equipement",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "personnel_id"
+        ],
+        "firstTableName": "OrdreTravail",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "personnel_id"
+        ],
+        "secondTableName": "Personnel",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "operation_id"
+        ],
+        "firstTableName": "OrdreTravail",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "operation_id"
+        ],
+        "secondTableName": "Operation",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "personnel_id"
+        ],
+        "firstTableName": "Operation",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "personnel_id"
+        ],
+        "secondTableName": "Personnel",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "outillage_id"
+        ],
+        "firstTableName": "Operation",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "outillage_id"
+        ],
+        "secondTableName": "Outillage",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      },
+      {
+        "firstFieldNames": [
+          "sous_operation"
+        ],
+        "firstTableName": "Operation",
+        "firstSchemaName": "public",
+        "firstRelation": "1",
+        "secondFieldNames": [
+          "operation_id"
+        ],
+        "secondTableName": "Operation",
+        "secondSchemaName": "public",
+        "secondRelation": "*",
+        "checkPoints": []
+      }
+    ]
+  },
+  "views": {}
+}

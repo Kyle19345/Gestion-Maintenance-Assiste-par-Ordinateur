@@ -17,8 +17,12 @@ def make_machine():
             "ref": "MCH-001",
             "nom": "Machine_test",
             "categorie": "Test",
+            "sous_equipement_id": "Moteur A",
+            "fiche_technique": "Element de distribution",
+            "fabricant": "Toyota",
             "date_service": "2025-01-01",
-            "etat": EtatMachine.ACTIF
+            "etat": EtatMachine.ACTIF,
+            "criticite": "Critique"
         }
 
         defaults.update(kwargs)
@@ -34,7 +38,7 @@ def make_intervention():
             "ref": "IN-001",
             "description": "Intervention test",
             "date_intervention": "07/08/2026",
-            "dure" : "3J",
+            "dure" : "3",
             "statut": StatutIntervention.PLANIFIE
         }
 
@@ -43,3 +47,25 @@ def make_intervention():
         return Intervention(**defaults)
 
     return _make_intervention
+
+@pytest.fixture
+def make_data_machine():
+    def _make_data_machine(**kwargs):
+        defaults = {
+            "ref": "MCH-01",
+            "nom": "Moteur asynchrone",
+            "categorie": "Moteur",
+            "sous_equipement_id": "Machine à presse",
+            "fiche_technique": "Fihce Moteur asynchrone",
+            "fabricant": "Helsinki",
+            "etat": EtatMachine.ACTIF.value,
+            "compteur": "45",
+            "date_service": "12/10/2005",
+            "criticite": "critique"
+        }
+
+        defaults.update(kwargs)
+
+        return defaults
+
+    return _make_data_machine

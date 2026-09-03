@@ -64,7 +64,7 @@ class MainController:
     def show_machine(self) -> None:
         """Affiche les machines de la bdd"""
         self.intervention.planing.grid_forget()
-        self.intervention.list_intervenetion.grid_forget()
+        self.intervention.list_intervention.grid_forget()
         self.machine.list_machine.grid(
             row=1,
             column=1,
@@ -80,7 +80,7 @@ class MainController:
         """Affiche les intervention de la bdd"""
         self.intervention.planing.grid_forget()
         self.machine.list_machine.grid_forget()
-        self.intervention.list_intervenetion.grid(
+        self.intervention.list_intervention.grid(
             row=1,
             column=1,
             padx=(0, 10),
@@ -94,8 +94,14 @@ class MainController:
     def show_planing(self) -> None:
         """Affiche les interventions avec le statut non réalisé."""
         self.machine.list_machine.grid_forget()
-        self.intervention.list_intervenetion.grid_forget()
-        self.intervention.planing.grid(row=1,column=1,padx=(0,10),pady=(0,10),sticky="nsew")
+        self.intervention.list_intervention.grid_forget()
+        self.intervention.planing.grid(
+            row=1,
+            column=1,
+            padx=(0, 10),
+            pady=(0, 10),
+            sticky="nsew"
+        )
         self.intervention.afficher_planing()
 
         logger.info("Chargement planing effectué")

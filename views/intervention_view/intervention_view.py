@@ -115,7 +115,7 @@ class ListIntervention(BaseFrame):
             if 0 <= index < len(self._donnees) and self.on_select:
                 self.on_select(self._donnees[index])
             
-    def search_get(self) -> None:
+    def search_get(self) -> str:
         "Récupère les donné entré dans la barrre de recherche."
         return self.barre_recherche.get().strip()
 

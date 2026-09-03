@@ -10,6 +10,7 @@ import logging
 
 from controller.main_controller import MainController
 from models.database import BaseDeDonne
+from views.sider_bar_view import Sidebar, Header
 
 
 DEBUG_MODE = True
@@ -27,7 +28,8 @@ root.title("GMAO")
 root.resizable(False, False)
 
 database = BaseDeDonne()
-app = MainController(master = root, database = database)
+
+app = MainController(master=root, database=database)
 
 root.protocol("WM_DELETE_WINDOW",app.on_close)
 

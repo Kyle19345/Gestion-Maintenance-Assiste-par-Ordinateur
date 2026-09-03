@@ -8,3 +8,9 @@ __pycache__/
 
 # Logs
 *.log
+
+*.pytest_cache
+
+cahier_de_charge.md
+diagramme_db.dbdiagram
+diagramme.db.dbml

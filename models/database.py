@@ -13,9 +13,10 @@ et planing sur chaque machine.
 # Optimisation de la BDD.
 # Système Backup des données.
 # Refactoriser completement la BDD (priorité haute)
+# Gestion erreur sur intervention
 
 
-from typing import List, Tuple
+from typing import List
 
 import sqlite3
 import logging
@@ -29,6 +30,18 @@ from models.intervention import Intervention, StatutIntervention
 logger = logging.getLogger(__name__)
 
 
+class DatabaseError(Exception):
+    pass
+
+
+class DuplicateReferenceError(DatabaseError):
+    pass
+
+
+class PrimaryKeyError(DatabaseError):
+    pass
+
+
 class BaseDeDonne:
     """
     Base de donné principal de l'application
@@ -39,35 +52,79 @@ class BaseDeDonne:
 
         self.cur.execute("PRAGMA foreign_keys = ON")
 
-        self.cur.execute("""
-                        CREATE TABLE IF NOT EXISTS machine(
-                            machine_id PRIMARY KEY NOT NULL,
-                            ref TEXT UNIQUE,
-                            nom TEXT NOT NULL,
-                            categorie TEXT NOT NULL,
-                            date_service TEXT NOT NULL,
-                            fabricant TEXT NOT NULL,
-                            etat TEXT NOT NULL,
-                            compteur INTEGER
-                        )
-                        """)
+        self.cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS machine(
+                machine_id TEXT PRIMARY KEY NOT NULL,
+                ref TEXT UNIQUE,
+                nom TEXT NOT NULL,
+                categorie TEXT NOT NULL,
+                sous_equipement_id TEXT,
+                fiche_technique TEXT,
+                fabricant TEXT,
+                etat TEXT,
+                compteur INTEGER,
+                date_service TEXT NOT NULL,
+                criticite TEXT
+            )
+            """
+        )
 
-        self.cur.execute("""
-                        CREATE TABLE IF NOT EXISTS intervention (
-                            intervention_id PRIMARY KEY NOT NULL, 
-                            ref TEXT UNIQUE,
-                            description TEXT,
-                            date_intervention TEXT NOT NULL,
-                            machine_id TEXT,
-                            dure INTEGER,
-                            outils TEXT,
-                            executant TEXT NOT NULL,
-                            statut TEXT NOT NULL,
-                            FOREIGN KEY (machine_id)
-                                REFERENCES machine (machine_id)
-                                ON DELETE CASCADE
-                        )
-                        """)
+        self.cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS intervention (
+                intervention_id TEXT PRIMARY KEY NOT NULL, 
+                ref TEXT UNIQUE,
+                description TEXT,
+                date_intervention TEXT NOT NULL,
+                machine_id TEXT,
+                dure INTEGER,
+                outils TEXT,
+                executant TEXT NOT NULL,
+                statut TEXT NOT NULL,
+                FOREIGN KEY (machine_id)
+                    REFERENCES machine (machine_id)
+                    ON DELETE CASCADE
+            )
+            """
+        )
+
+        self.cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS operation (
+                operation_id TEXT PRIMARY KEY NOT NULL,
+                description TEXT,
+                sous_operation TEXT,
+                personnel_id TEXT,
+                outillage_id TEXT,
+                date_intervention TEXT,
+                date_fin_prevue TEXT
+            )
+            """
+        )
+
+        self.cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS personnel (
+                personnel_id TEXT PRIMARY KEY NOT NULL,
+                matricule TEXT NOT NULL,
+                nom TEXT,
+                prenom TEXT,
+                num_securite_social TEXT,
+                comptetences TEXT
+            )
+            """
+        )
+
+        self.cur.execute(
+            """
+            CREATE TABLE IF NOT EXISTS outillage (
+                outillage_id TEXT PRIMARY KEY NOT NULL,
+                nom TEXT,
+                statut TEXT NOT NULL
+            )
+            """
+        )
 
         self.com.commit()
         logger.info("Base de données initialisée")
@@ -88,7 +145,7 @@ class BaseDeDonne:
             logger.exception(log_error)
             raise
 
-    def get_all_intervention(self) -> List[Intervention]:
+    def get_intervention_realise(self) -> List[Intervention]:
         """
         Recupère toutes les interventions avec le statut réalisé
         """
@@ -116,7 +173,7 @@ class BaseDeDonne:
         logger.info("Extraction machine effectué depuis la Bdd")
         return [Machine(*row) for row in rows]
 
-    def get_every_intervention(self):
+    def get_all_intervention(self):
         """
         Récupère toutes les interventions avec toutes les status
         """
@@ -143,7 +200,6 @@ class BaseDeDonne:
         logger.info("Extraction planing effectué depuis la Bdd")
         return [Intervention(*row) for row in rows]
 
-    
     def add_intervention(self, intervention: Intervention) -> None:
         """
         Fonction permettant d'ajouer une intervention
@@ -164,12 +220,25 @@ class BaseDeDonne:
         """
 
         values = tuple(data.values())
-        self._execute_sql(
-            sql=sql,
-            values = values,
-            log_success = f"Interveniton {data['ref']} ajouter dans la db",
-            log_error = f"Erreur lors de l'enregistrement de l'intervention {data['ref']} "
-        )
+
+        try:
+            self._execute_sql(
+                sql=sql,
+                values = values,
+                log_success = f"Interveniton {data['ref']} ajouter dans la db",
+                log_error = f"Erreur lors de l'enregistrement de l'intervention {data['ref']} "
+            )
+
+        except sqlite3.IntegrityError as error:
+            if "intervention.ref" in str(error):
+                raise DuplicateReferenceError(
+                    "la référence de l'intervention existe déja"
+                ) from error
+            
+            if "intervention.intervention_id" in str(error):
+                raise PrimaryKeyError(
+                    "L'id de l'intervention existe déja"
+                )
     
     def add_machine(self, machine: Machine) -> None:
         """
@@ -189,13 +258,26 @@ class BaseDeDonne:
         VALUES ({placeholders})
         """
         values = tuple(data.values())
-        self._execute_sql(
-            sql=sql,
-            values=values,
-            log_success=f"Machine {data['ref']} enregistrer dans la db",
-            log_error=f"Erreur lors de l'enregistrement de la machine {data['ref']} dans la db"
-        )
-    
+
+        try:
+            self._execute_sql(
+                sql=sql,
+                values=values,
+                log_success=f"Machine {data['ref']} enregistrer dans la db",
+                log_error=f"Erreur lors de l'enregistrement de la machine {data['ref']} dans la db"
+            )
+
+        except sqlite3.IntegrityError as error:
+            if "machine.ref" in str(error):
+                raise DuplicateReferenceError(
+                    "la référence de la machine existe déja"
+                ) from error
+
+            if "machine.machine_id" in str(error):
+                raise PrimaryKeyError(
+                    "L'id de la machine existe déja"
+                )
+
     def update_intervention(self, intervention: Intervention) -> None:
         """
         Met à jour une intervention en fonction de ref
@@ -214,13 +296,25 @@ class BaseDeDonne:
         values = list(data_update.values())
         values.append(intervention.intervention_id)
 
-        self._execute_sql(
-            sql=sql,
-            values=values,
-            log_success=f"Mise à jour de l'intervention {data['ref']} effectué",
-            log_error=f"Erreur lors de la mise à jour de l'intervention {data['ref']}"
-        )
-        
+        try:
+            self._execute_sql(
+                sql=sql,
+                values=values,
+                log_success=f"Mise à jour de l'intervention {data['ref']} effectué",
+                log_error=f"Erreur lors de la mise à jour de l'intervention {data['ref']}"
+            )
+
+        except sqlite3.IntegrityError as error:
+            if "intervention.ref" in str(error):
+                raise DuplicateReferenceError(
+                    "la référence de l'intervention existe déja"
+                ) from error
+
+            if "intervention.intervention_id" in str(error):
+                raise PrimaryKeyError(
+                    "L'id de l'intervention existe déja"
+                ) 
+
     def update_machine(self, machine: Machine) -> None:
         """
         Met à jour une machine
@@ -239,13 +333,24 @@ class BaseDeDonne:
         values = list(data_update.values())
         values.append(machine.machine_id)
 
-        self._execute_sql(
-            sql=sql,
-            values=values,
-            log_success=f"Mise à jour de la machine {data['ref']} effectué.",
-            log_error=f"Erreur lors de la mise à jour de la machine {data['ref']}."
-        )
-       
+        try:
+            self._execute_sql(
+                sql=sql,
+                values=values,
+                log_success=f"Mise à jour de la machine {data['ref']} effectué.",
+                log_error=f"Erreur lors de la mise à jour de la machine {data['ref']}."
+            )
+        except sqlite3.IntegrityError as error:
+            if "machine.ref" in str(error):
+                raise DuplicateReferenceError(
+                    "la référence de la machine existe déja"
+                ) from error
+
+            if "machine.machine_id" in str(error):
+                raise PrimaryKeyError(
+                    "L'id de la machine existe déja"
+                )
+
     def get_intervention_asset(
             self,
             machine_id: str
@@ -301,7 +406,7 @@ class BaseDeDonne:
             log_success=f"Suppression intervention {intervention_id} effectué.",
             log_error=f"Erreur lors de la suppression de l'intervention {intervention_id}."
         )
-       
+
     def find_intervention(
             self,
             intervention_ref: str

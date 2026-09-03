@@ -1,8 +1,10 @@
 import pytest
-import sqlite3
 
 from models.intervention import Intervention, StatutIntervention
+from models.database import DuplicateReferenceError, PrimaryKeyError
 from models.machine import Machine
+from confest import db, make_machine, make_intervention
+
 
 def test_add_planing(db, make_machine, make_intervention):
     machine = make_machine(
@@ -25,15 +27,17 @@ def test_add_planing(db, make_machine, make_intervention):
 
 def test_add_planing_with_no_machine(db, make_intervention):
     intervention = make_intervention(
-            ref = "IN-001",
-            description = "Test_add_intervention",
-            machine_id = "mch-01"
-        )
-    with pytest.raises(sqlite3.IntegrityError):
-        db.add_intervention(intervention = intervention)
+        intervention_id = "IN",
+        ref = "IN-001",
+        description = "Test_add_intervention"
+    )
+
+    db.add_intervention(intervention = intervention)
 
     results = db.get_planing()
-    assert(len(results)) == 0
+
+    assert len(results) == 1
+    assert results[0].ref == intervention.ref
 
 def test_add_multiples_planing(db, make_machine, make_intervention):
     machine = make_machine(
@@ -72,7 +76,7 @@ def test_add_intervention(db):
     db.add_machine(machine=machine)
     db.add_intervention(intervention=intervention)
 
-    results = db.get_all_intervention()
+    results = db.get_intervention_realise()
 
     assert len(results) == 1
     assert results[0].statut == "Réalisé"
@@ -82,10 +86,52 @@ def test_add_interveniton_without_machine(db, make_intervention):
 
     db.add_intervention(intervention=intervention)
 
-    result = db.get_every_intervention()
+    result = db.get_all_intervention()
 
     assert len(result) == 1
     assert result[0].machine_id is None
+
+def test_add_intervention_error_ref(db, make_intervention):
+    intervention = make_intervention(
+        intervention_id = "IN-01",
+        ref = "IN"
+    )
+
+    intervention2 = make_intervention(
+        intervention_id = "IN-02",
+        ref = "IN"
+    )
+
+    db.add_intervention(intervention)
+
+    with pytest.raises(DuplicateReferenceError):
+        db.add_intervention(intervention2)
+
+    result = db.get_all_intervention()
+
+    assert len(result) == 1
+    assert result[0].ref == "IN"
+
+def test_intervention_id_error(db, make_intervention):
+    intervention = make_intervention(
+        intervention_id = "IN-01",
+        ref = "IN"
+    )
+
+    intervention2 = make_intervention(
+        intervention_id = "IN-01",
+        ref = "IN1"
+    )
+
+    db.add_intervention(intervention)
+
+    with pytest.raises(PrimaryKeyError):
+        db.add_intervention(intervention2)
+
+    result = db.get_all_intervention()
+
+    assert len(result) == 1
+    assert result[0].ref == "IN"
 
 def test_delete_intervention(db):
     machine = Machine(
@@ -100,11 +146,11 @@ def test_delete_intervention(db):
 
     db.add_machine(machine=machine)
     db.add_intervention(intervention=intervention)
-    results = db.get_every_intervention()
+    results = db.get_all_intervention()
     machines = db.get_all_machine()
 
     db.delete_intervention(intervention_id="IN001")
-    result2= db.get_every_intervention()
+    result2= db.get_all_intervention()
     machines2 = db.get_all_machine()
 
     assert len(results) == 1
@@ -133,10 +179,10 @@ def test_update_intervention(db):
 
     db.add_machine(machine=machine)
     db.add_intervention(intervention=intervention)
-    results = db.get_every_intervention()
+    results = db.get_all_intervention()
     
     db.update_intervention(intervention=intervention_maj)
-    results2 = db.get_every_intervention()
+    results2 = db.get_all_intervention()
     results_maj = db.get_planing()
 
     assert len(results) == 1
@@ -144,6 +190,32 @@ def test_update_intervention(db):
     assert len(results2) == 1
     assert results_maj[0].statut == "Planifié"
     assert results_maj[0].outils == "Tourne Vis"
+
+def test_update_intervention_error_ref(db, make_intervention):
+    intervention1 = make_intervention(
+        intervention_id = "IN-01",
+        ref = "IN"
+    )
+
+    intervention2 = make_intervention(
+        intervention_id = "IN-02",
+        ref = "IN-02"
+    )
+
+    intervention3 = make_intervention(
+        intervention_id = "IN-02",
+        ref = "IN"
+    )
+
+    db.add_intervention(intervention1)
+    db.add_intervention(intervention2)
+
+    with pytest.raises (DuplicateReferenceError):
+        db.update_intervention(intervention3)
+
+    result = db.get_all_intervention()
+    assert len(result) == 2
+    assert result[1].ref == "IN-02" 
 
 def test_delete_cascade(db):
     machine = Machine(
@@ -166,12 +238,12 @@ def test_delete_cascade(db):
     db.delete_machine(machine_id="mch-01")
 
     machines = db.get_all_machine()
-    interventions = db.get_all_intervention()
+    interventions = db.get_intervention_realise()
 
     assert len(machines) == 0
     assert len(interventions) == 0
 
-def test_get_every_intervention(db):
+def test_get_all_intervention(db):
     machine = Machine(
         machine_id = "mch-01"
     )
@@ -191,7 +263,7 @@ def test_get_every_intervention(db):
     db.add_intervention(intervention=intervention)
     db.add_intervention(intervention=intervention2)
 
-    results = db.get_every_intervention()
+    results = db.get_all_intervention()
 
     assert len(results) == 2
 

@@ -1,16 +1,18 @@
-#Cache
+# Cache Python
 __pycache__/
 *.pyc
 
-# Fihier de config IDE
+# Fichiers de configuration IDE
 .vscode/
-.idea
+.idea/
 
 # Logs
 *.log
 
-*.pytest_cache
+# Cache pytest
+.pytest_cache/
 
+# Documentation / conception interne
 cahier_de_charge.md
 diagramme_db.dbdiagram
 diagramme.db.dbml
